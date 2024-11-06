@@ -1,0 +1,56 @@
+import pandas as pd
+import csv
+
+# Виведення вмісту всього CSV-файлу у вигляді таблиці
+try:
+    data = pd.read_csv("inflation_data.csv", encoding="utf-8")
+    print("Вміст файлу у вигляді таблиці:")
+    print(data.to_string(index=False))  # Використовуємо to_string для повного виведення
+except FileNotFoundError:
+    print("Файл 'inflation_data.csv' не знайдено!")
+
+# Пошук країн з мінімальним та максимальним значенням інфляції за кожен рік (2010-2019)
+years = [f"{year} [YR{year}]" for year in range(2010, 2020)]
+min_max_per_year = {year: {"min_country": None, "min_value": float('inf'),
+                           "max_country": None, "max_value": float('-inf')} for year in years}
+
+try:
+    with open("inflation_data.csv", "r", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            country = row["Country Name"]
+            for year in years:
+                try:
+                    value = float(row[year])
+                    # Оновлення мінімального значення
+                    if value < min_max_per_year[year]["min_value"]:
+                        min_max_per_year[year]["min_country"] = country
+                        min_max_per_year[year]["min_value"] = value
+                    # Оновлення максимального значення
+                    if value > min_max_per_year[year]["max_value"]:
+                        min_max_per_year[year]["max_country"] = country
+                        min_max_per_year[year]["max_value"] = value
+                except ValueError:
+                    continue  # Пропуск некоректних даних
+
+    # Запис результатів у файл
+    with open("inflation_summary.csv", "w", encoding="utf-8", newline='') as csvfile:
+        fieldnames = ["Year", "Min Country", "Min Value", "Max Country", "Max Value"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for year in years:
+            writer.writerow({
+                "Year": year,
+                "Min Country": min_max_per_year[year]["min_country"],
+                "Min Value": min_max_per_year[year]["min_value"],
+                "Max Country": min_max_per_year[year]["max_country"],
+                "Max Value": min_max_per_year[year]["max_value"]
+            })
+
+    print("\nРезультати аналізу збережено у файл 'inflation_summary.csv'.")
+
+except FileNotFoundError:
+    print("Файл 'inflation_data.csv' не знайдено!")
+except Exception as e:
+    print("Виникла помилка:", e)
